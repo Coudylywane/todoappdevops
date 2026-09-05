@@ -58,6 +58,13 @@
         - grafana/provisioning/datasources
         - grafana/provisioning/dashboards
 
+    - name: Donner la propriété de /opt/todo à l'utilisateur ubuntu
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        owner: ubuntu
+        group: ubuntu
+        recurse: true
+
     - name: Copier la configuration Traefik
       ansible.builtin.copy:
         src: "{{ inventory_dir }}/files/traefik/traefik.yml"

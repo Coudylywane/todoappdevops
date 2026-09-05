@@ -24,6 +24,9 @@ services:
       traefik.http.routers.backend.entrypoints: "webapi"
       traefik.http.routers.backend.rule: "HostRegexp(`{host:.+}`)"
       traefik.http.services.backend.loadbalancer.server.port: "{{ backend_port }}"
+      traefik.http.routers.backend-api.entrypoints: "web"
+      traefik.http.routers.backend-api.rule: "PathPrefix(`/api`)"
+      traefik.http.routers.backend-api.service: "backend"
 
   frontend:
     build:
