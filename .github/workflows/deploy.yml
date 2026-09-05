@@ -19,9 +19,17 @@ jobs:
         id: target
         run: |
           if [ "${{ github.ref_name }}" = "main" ]; then
+            if [ -z "${{ secrets.PROD_HOST }}" ]; then
+              echo "::error::Secret PROD_HOST manquant ! Ajoutez-le dans Settings -> Secrets"
+              exit 1
+            fi
             echo "env=prod" >> "$GITHUB_OUTPUT"
             echo "host=${{ secrets.PROD_HOST }}" >> "$GITHUB_OUTPUT"
           else
+            if [ -z "${{ secrets.DEV_HOST }}" ]; then
+              echo "::error::Secret DEV_HOST manquant ! Ajoutez-le dans Settings -> Secrets"
+              exit 1
+            fi
             echo "env=dev" >> "$GITHUB_OUTPUT"
             echo "host=${{ secrets.DEV_HOST }}" >> "$GITHUB_OUTPUT"
           fi
