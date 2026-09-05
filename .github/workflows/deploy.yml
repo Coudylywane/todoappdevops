@@ -26,37 +26,33 @@ jobs:
             echo "host=${{ secrets.DEV_HOST }}" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Copier le backend vers le serveur ${{ steps.target.outputs.env }}
-        uses: Burnett01/rsync-deployments@9.0.1
+      - name: Charger la clé SSH dans l'agent
+        uses: webfactory/ssh-agent@v0.9.0
         with:
-          switches: -avzr --delete --exclude=node_modules --exclude=dist --exclude=.env --exclude=.git --exclude=*.log
-          path: backend/
-          remote_path: /opt/todo/backend/
-          remote_host: ${{ steps.target.outputs.host }}
-          remote_user: ubuntu
-          remote_key: |
+          ssh-private-key: |
             ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: Ajouter le serveur aux known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ steps.target.outputs.host }} >> ~/.ssh/known_hosts
+
+      - name: Copier le backend vers le serveur ${{ steps.target.outputs.env }}
+        run: |
+          rsync -avzr --delete \
+            --exclude=node_modules --exclude=dist --exclude=.env \
+            --exclude=.git --exclude=*.log \
+            backend/ ubuntu@${{ steps.target.outputs.host }}:/opt/todo/backend/
 
       - name: Copier le frontend vers le serveur ${{ steps.target.outputs.env }}
-        uses: Burnett01/rsync-deployments@9.0.1
-        with:
-          switches: -avzr --delete --exclude=node_modules --exclude=dist --exclude=.env --exclude=.git --exclude=*.log
-          path: frontend/
-          remote_path: /opt/todo/frontend/
-          remote_host: ${{ steps.target.outputs.host }}
-          remote_user: ubuntu
-          remote_key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          rsync -avzr --delete \
+            --exclude=node_modules --exclude=dist --exclude=.env \
+            --exclude=.git --exclude=*.log \
+            frontend/ ubuntu@${{ steps.target.outputs.host }}:/opt/todo/frontend/
 
       - name: Reconstruire et redémarrer la stack ${{ steps.target.outputs.env }}
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ steps.target.outputs.host }}
-          username: ubuntu
-          key: |
-            ${{ secrets.SSH_PRIVATE_KEY }}
-          script: |
-            cd /opt/todo
-            docker compose -f docker-compose.app.yml up -d --build
-            docker image prune -f
-            echo "Déploiement terminé sur : $(hostname) (env=${{ steps.target.outputs.env }})"
+        run: |
+          ssh ubuntu@${{ steps.target.outputs.host }} \
+            'cd /opt/todo && docker compose -f docker-compose.app.yml up -d --build && docker image prune -f'
+          echo "Déploiement terminé sur l'environnement : ${{ steps.target.outputs.env }}"
