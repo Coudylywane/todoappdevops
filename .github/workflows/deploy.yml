@@ -27,36 +27,24 @@ jobs:
           fi
 
       - name: Copier le backend vers le serveur ${{ steps.target.outputs.env }}
-        uses: appleboy/rsync-deploy-action@v0.2.2
+        uses: Burnett01/rsync-deployments@9.0.1
         with:
-          host: ${{ steps.target.outputs.host }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "backend/"
-          target: "/opt/todo/"
-          strip_components: 0
-          exclude: |
-            node_modules
-            dist
-            .env
-            .git
-            *.log
+          switches: -avzr --delete --exclude=node_modules --exclude=dist --exclude=.env --exclude=.git --exclude=*.log
+          path: backend/
+          remote_path: /opt/todo/backend/
+          remote_host: ${{ steps.target.outputs.host }}
+          remote_user: ubuntu
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Copier le frontend vers le serveur ${{ steps.target.outputs.env }}
-        uses: appleboy/rsync-deploy-action@v0.2.2
+        uses: Burnett01/rsync-deployments@9.0.1
         with:
-          host: ${{ steps.target.outputs.host }}
-          username: ubuntu
-          key: ${{ secrets.SSH_PRIVATE_KEY }}
-          source: "frontend/"
-          target: "/opt/todo/"
-          strip_components: 0
-          exclude: |
-            node_modules
-            dist
-            .env
-            .git
-            *.log
+          switches: -avzr --delete --exclude=node_modules --exclude=dist --exclude=.env --exclude=.git --exclude=*.log
+          path: frontend/
+          remote_path: /opt/todo/frontend/
+          remote_host: ${{ steps.target.outputs.host }}
+          remote_user: ubuntu
+          remote_key: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Reconstruire et redémarrer la stack ${{ steps.target.outputs.env }}
         uses: appleboy/ssh-action@v1.0.3
