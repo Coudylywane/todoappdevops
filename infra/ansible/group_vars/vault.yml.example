@@ -1,0 +1,3 @@
+# Ce fichier ne doit jamais être versionné (contient les mots de passe).
+postgres_password: "supersecret"
+grafana_admin_password: "grafana123"

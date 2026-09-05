@@ -1,0 +1,23 @@
+project_name: todo
+app_dir: /opt/{{ project_name }}
+stack_name: "{{ project_name }}-{{ app_env }}"
+
+# Bannière affichée dans l'interface
+_app_title: "Todo App - {{ site_display_name }}"
+
+# Identifiants des services
+postgres_user: postgres
+postgres_password: "{{ vault_postgres_password | default('changeme') }}"
+postgres_db: todo_db
+
+grafana_admin_user: admin
+grafana_admin_password: "{{ vault_grafana_password | default('admin') }}"
+
+# Réseau/service interne
+backend_container: backend
+backend_port: 5000
+frontend_nginx_port: 80
+traefik_api_entrypoint_port: 8081
+prometheus_port: 9090
+grafana_port: 3000
+traefik_dashboard_port: 8080

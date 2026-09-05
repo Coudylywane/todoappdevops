@@ -1,0 +1,71 @@
+name: Deploy
+
+# Déclenché sur un push vers develop (-> dev) ou main (-> prod)
+on:
+  push:
+    branches: [develop, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout du code
+        uses: actions/checkout@v4
+
+      # Détermine la cible selon la branche : main -> prod, sinon dev
+      - name: Déterminer la cible (dev ou prod)
+        id: target
+        run: |
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            echo "env=prod" >> "$GITHUB_OUTPUT"
+            echo "host=${{ secrets.PROD_HOST }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "env=dev" >> "$GITHUB_OUTPUT"
+            echo "host=${{ secrets.DEV_HOST }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Copier le backend vers le serveur ${{ steps.target.outputs.env }}
+        uses: appleboy/rsync-deploy-action@v0.2.2
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "backend/"
+          target: "/opt/todo/"
+          strip_components: 0
+          exclude: |
+            node_modules
+            dist
+            .env
+            .git
+            *.log
+
+      - name: Copier le frontend vers le serveur ${{ steps.target.outputs.env }}
+        uses: appleboy/rsync-deploy-action@v0.2.2
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "frontend/"
+          target: "/opt/todo/"
+          strip_components: 0
+          exclude: |
+            node_modules
+            dist
+            .env
+            .git
+            *.log
+
+      - name: Reconstruire et redémarrer la stack ${{ steps.target.outputs.env }}
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ steps.target.outputs.host }}
+          username: ubuntu
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            cd /opt/todo
+            docker compose -f docker-compose.app.yml up -d --build
+            docker image prune -f
+            echo "Déploiement terminé sur : $(hostname) (env=${{ steps.target.outputs.env }})"

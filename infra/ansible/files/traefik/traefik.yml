@@ -1,0 +1,19 @@
+# Configuration statique de Traefik
+api:
+  dashboard: true
+  insecure: true   # dashboard accessible sur http://IP:8080
+
+entryPoints:
+  web:
+    address: ":80"
+  webapi:
+    address: ":8081"
+
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    network: todo-net
+
+log:
+  level: INFO

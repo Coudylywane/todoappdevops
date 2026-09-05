@@ -1,0 +1,28 @@
+# Node
+node_modules/
+dist/
+.venv/
+
+# Environnement
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.pem
+infra/terraform/terraform.tfvars
+
+# Ansible
+inventory.ini
+*.retry
+vault.yml
+infra/ansible/secrets/

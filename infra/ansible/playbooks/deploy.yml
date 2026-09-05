@@ -1,0 +1,99 @@
+---
+# Provisionnement de l'infrastructure (prérequis au déploiement) :
+# Traefik + PostgreSQL + Prometheus + Grafana + node-exporter.
+# L'application todo est déployée par GitHub Actions (docker-compose.app.yml).
+# Usage : ansible-playbook playbooks/deploy.yml -l <dev|prod>
+
+- name: Provisionner l'infrastructure Todo
+  hosts: all
+  become: true
+
+  tasks:
+    - name: Créer le répertoire de l'application
+      ansible.builtin.file:
+        path: "{{ app_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Créer les sous-répertoires backend et frontend
+      ansible.builtin.file:
+        path: "{{ app_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - backend
+        - frontend
+
+    - name: Copier le code backend (première installation)
+      ansible.posix.synchronize:
+        src: "{{ inventory_dir }}/../../backend/"
+        dest: "{{ app_dir }}/backend/"
+        use_ssh_args: true
+        delete: false
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=dist"
+          - "--exclude=.env"
+          - "--exclude=*.log"
+
+    - name: Copier le code frontend (première installation)
+      ansible.posix.synchronize:
+        src: "{{ inventory_dir }}/../../frontend/"
+        dest: "{{ app_dir }}/frontend/"
+        use_ssh_args: true
+        delete: false
+        rsync_opts:
+          - "--exclude=node_modules"
+          - "--exclude=dist"
+          - "--exclude=*.log"
+
+    - name: Créer les sous-répertoires de configuration
+      ansible.builtin.file:
+        path: "{{ app_dir }}/{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - traefik
+        - prometheus
+        - grafana/provisioning/datasources
+        - grafana/provisioning/dashboards
+
+    - name: Copier la configuration Traefik
+      ansible.builtin.copy:
+        src: "{{ inventory_dir }}/files/traefik/traefik.yml"
+        dest: "{{ app_dir }}/traefik/traefik.yml"
+        mode: "0644"
+
+    - name: Copier la configuration Prometheus
+      ansible.builtin.copy:
+        src: "{{ inventory_dir }}/files/prometheus/prometheus.yml"
+        dest: "{{ app_dir }}/prometheus/prometheus.yml"
+        mode: "0644"
+
+    - name: Copier le provisioning Grafana (datasources)
+      ansible.builtin.copy:
+        src: "{{ inventory_dir }}/files/grafana/provisioning/"
+        dest: "{{ app_dir }}/grafana/provisioning/"
+        mode: "0644"
+
+    - name: Rendre le compose d'infrastructure
+      ansible.builtin.template:
+        src: "{{ inventory_dir }}/files/docker-compose.infra.yml.j2"
+        dest: "{{ app_dir }}/docker-compose.infra.yml"
+        mode: "0644"
+
+    - name: Rendre le compose de l'application (utilisé par GitHub Actions)
+      ansible.builtin.template:
+        src: "{{ inventory_dir }}/files/docker-compose.app.yml.j2"
+        dest: "{{ app_dir }}/docker-compose.app.yml"
+        mode: "0644"
+
+    - name: Lancer l'infrastructure (Traefik, PostgreSQL, Prometheus, Grafana)
+      ansible.builtin.shell:
+        cmd: docker compose -f docker-compose.infra.yml up -d
+        chdir: "{{ app_dir }}"
+      register: compose_up
+
+    - name: Afficher le résultat du provisionnement
+      ansible.builtin.debug:
+        var: compose_up.stdout_lines
